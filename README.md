@@ -1,41 +1,56 @@
-# link-profit-scenario
+# link-profit-scenario · 链接利润情景测算
 
-A WorkBuddy / Agent Skill for analyzing the profit model of e-commerce operation workbooks and answering **what-if scenario questions** such as:
+一个 WorkBuddy / Agent Skill：解析电商经营报表中的利润计算逻辑，并回答 **「降花费 / 降销售额 / 降销量之后，利润怎么变」** 类情景测算问题。
 
-> "If ad spend drops 10% and sales volume drops 5%, how does the listing's profit change?"
+> 示例提问："如果推广花费降低 10%、销量降低 5%，这个链接的利润是多少？"
 
-Built for the shared Tmall store-operation workbook template (a 50 MB macro-enabled `.xlsm` with source-data sheets, an operation dashboard, and a 「【预测】链接利润」 forecast sheet).
+面向天猫店铺经营报表模板设计（约 50MB 的 `.xlsm`：含基源数据表、经营看板，以及「【预测】链接利润」预测表）。
 
-## What it does
+## 它能做什么
 
-1. **Extracts the real profit formula** from the workbook's own cells (dynamic-array formulas: `LET` / `XLOOKUP` / `GROUPBY` / `FILTER`), instead of assuming a textbook formula.
-2. **Verifies** by reproducing the sheet's profit column — the analysis only proceeds when the reproduction matches the sheet within 0.01.
-3. **Runs the scenario**: every cost item is rescaled by its true driver (sales-linked / volume-linked / ad-spend-linked / fixed) and a per-item comparison table is produced.
+1. **从表格自身公式提取真实利润算法**——直接读取单元格里的动态数组公式（`LET` / `XLOOKUP` / `GROUPBY` / `FILTER` / `ANCHORARRAY`），而不是套用教科书公式。
+2. **强制验证**——用提取出的参数复算表格的利润列，只有复算结果与表内值一致（误差 < 0.01）才继续做测算。
+3. **执行情景测算**——按每个成本项的真实驱动因子（随销售额 / 随件数 / 随花费 / 不变）分别缩放，输出逐项对比表。
 
-## Core insight it encodes
+## 核心结论
 
-In this model every cost is **variable** — there is no fixed cost. So a uniform x% scale-down scales profit by exactly x% and leaves the **profit margin unchanged**. Margin only moves when the scaling is asymmetric (e.g. spend −10% while sales only −5%) or when the per-unit cost structure changes (shipping, purchase cost, unit price).
+在这套模型里，**所有成本都是变动成本，不存在固定成本**。因此：
 
-## Key practices
+- 各项同比例下降 x% → 利润严格按 x% 等比缩放，**利润率完全不变**
+- 只有让降幅**不对称**（如花费降 10%、销售额只降 5%），或改变**单件成本结构**（运费 / 采购成本 / 客单价），利润率才会变化
 
-- Always read the **newest** file the user supplied; re-read the original rather than reusing any working copy (workbooks can be re-saved several times a day and the formulas change).
-- Locate data by header + formula, never by hard-coded column letters (layouts differ between store versions).
-- Cross-check the gross-sales column formula: it has several versions, and one of them contains a per-unit correction hard-coded for a specific product ID.
+一句话：等比缩量只是把亏损的蛋糕整体变小，切法没变。
 
-## Usage
+## 关键实践
 
-Place `SKILL.md` in your skills directory, e.g.
+- **永远以用户当次提供的最新文件为准**：直接读原文件（`read_only` 纯读，不修改文件），不要复用任何分析副本——报表一天内可能被多次保存，公式结构会变，旧结论会立刻失效。
+- **按表头 + 公式定位数据**，不要按固定列号取数——不同店铺版本的列布局会整体偏移。
+- **留意含税销售额列（O 列）的版本差异**：该列存在多个公式版本，其中一个版本含针对特定商品 ID 硬编码的每件修正项，换文件必须重读公式确认。
+
+## 使用方法
+
+把 `SKILL.md` 放入你的技能目录即可，例如：
 
 ```
 ~/.workbuddy/skills/link-profit-scenario/SKILL.md
 ```
 
-The agent picks it up automatically when the user asks a profit-scenario question about such a workbook.
+之后当用户对这类报表提出利润测算问题时，Agent 会自动加载该技能。
 
-## Sanitization notice
+## 目录结构
 
-All shop names, product IDs, fee rates and financial figures in this repository are **placeholders**. The skill documents the *methodology* only — no real business data is included.
+```
+.
+├── SKILL.md      # 技能主体：利润模型、联动规则表、执行流程、换表重提取清单
+├── README.md     # 中文说明（本文件）
+├── README.en.md  # English version
+└── LICENSE       # MIT
+```
 
-## License
+## 脱敏说明
+
+本仓库中所有店铺名称、商品 ID、费率与财务数字**均为占位符**。仓库仅记录**方法论**，不含任何真实经营数据。
+
+## 许可
 
 MIT
